@@ -94,7 +94,6 @@ probs = pd.Series([pred['probabilities'][1] for pred in pred_dicts])
 #tf.keras.experimental.export_saved_model(est, 'ModelisTree')
 #est.export_saved_model('ModelisTree')
 
-probs.plot(kind='hist', bins=20, title='predicted probabilities')
 
 a = pd.Series([pred['class_ids'][0] for pred in pred_dicts])
 cnt = 0
@@ -104,6 +103,4 @@ for i in range(len(a)):
     print(a[i], ' = ', y_eval[i])
 
 print('Accuracy: ', cnt/len(a))
-
-plt.show()
 
