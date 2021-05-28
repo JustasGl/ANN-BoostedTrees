@@ -4,6 +4,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
 
 df = pd.read_csv('data.csv')
 
@@ -39,5 +40,11 @@ a = np.argmax(model.predict(xtest), axis=-1)
 
 print(model.summary())
 
+con_mat = tf.math.confusion_matrix(labels=ytest, predictions=a).numpy()
+
+print(con_mat)
+
 model.save('modelis')
+
+
 

@@ -75,8 +75,17 @@ linear_est.train(train_input_fn, max_steps=MaxSteps)
 
 # Evaluation.
 result = linear_est.evaluate(eval_input_fn)
+
+pred_dicts = list(linear_est.predict(eval_input_fn))
+probs = pd.Series([pred['probabilities'][1] for pred in pred_dicts])
+
 print(pd.Series(result))
 
+a = pd.Series([pred['class_ids'][0] for pred in pred_dicts])
+con_mat = tf.math.confusion_matrix(labels=y_eval, predictions=a).numpy()
+print('Confusion matrix of Linear Clasification')
+print(con_mat)
+################################ BOOSTED TREES ######################################
 n_batches = 1
 est = tf.estimator.BoostedTreesClassifier(feature_columns,
                                           n_batches_per_layer=n_batches)
@@ -101,6 +110,11 @@ for i in range(len(a)):
     if a[i] == y_eval[i]:
         cnt+=1
     print(a[i], ' = ', y_eval[i])
+
+con_mat = tf.math.confusion_matrix(labels=y_eval, predictions=a).numpy()
+
+print('Confusion matrix of Boosted Trees')
+print(con_mat)
 
 print('Accuracy: ', cnt/len(a))
 
