@@ -50,7 +50,9 @@ model.fit(training, TrainTarget, epochs=25)
 test_loss, test_acc = model.evaluate(testing, Testtarget, verbose=2)
 
 a = np.argmax(model.predict(testing), axis=-1)
-
+fpr_keras, tpr_keras, thresholds_keras = roc_curve(Testtarget, a)
+a[a > thresholds_keras] = 1
+a[a < thresholds_keras] = 0
 print(model.summary())
 
 con_mat = tf.math.confusion_matrix(labels=Testtarget, predictions=a).numpy()
