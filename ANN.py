@@ -3,8 +3,9 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
-from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve
+from sklearn.metrics import auc
 
 df = pd.read_csv('data.csv')
 
@@ -32,30 +33,43 @@ training = training.to_numpy()
 Testtarget = Testtarget.to_numpy()
 TrainTarget = TrainTarget.to_numpy()
 
-training, testing,TrainTarget ,Testtarget = train_test_split(df, target, test_size = 0.2, random_state = 42)
-
 
 model = tf.keras.models.Sequential([
-  tf.keras.layers.Dense(64,input_dim=64, activation='sigmoid'),
-  tf.keras.layers.Dense(64, activation='sigmoid'),
-  tf.keras.layers.Dense(2)
+  tf.keras.layers.Dense(128,input_dim=64, activation='sigmoid'),
+  tf.keras.layers.Dense(128, activation='relu'),
+  tf.keras.layers.Dense(1, activation='sigmoid')
 ])
 
 model.compile(optimizer='adam',
-              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              loss='binary_crossentropy',
               metrics=['accuracy'])
 
 model.fit(training, TrainTarget, epochs=25)
 
 test_loss, test_acc = model.evaluate(testing, Testtarget, verbose=2)
 
-a = np.argmax(model.predict(testing), axis=-1)
+a = model.predict(testing)
+
+
 fpr_keras, tpr_keras, thresholds_keras = roc_curve(Testtarget, a)
-a[a > thresholds_keras] = 1
-a[a < thresholds_keras] = 0
+auc_keras = auc(fpr_keras, tpr_keras)
+plt.figure(1)
+plt.plot([0, 1], [0, 1], 'k--')
+plt.plot(fpr_keras, tpr_keras, label='Keras (area = {:.3f})'.format(auc_keras))
+plt.xlabel('False positive rate')
+plt.ylabel('True positive rate')
+plt.title('ROC curve')
+plt.legend(loc='best')
+plt.show()
+
 print(model.summary())
 
+a[a > auc_keras] = 1
+a[a < auc_keras] = 0
+
 con_mat = tf.math.confusion_matrix(labels=Testtarget, predictions=a).numpy()
+
+print('ANN Confusion matric')
 
 print(con_mat)
 

@@ -3,6 +3,8 @@ import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from matplotlib import pyplot as plt
+from sklearn.metrics import roc_curve
+from sklearn.metrics import auc
 
 MaxSteps = 100
 df = pd.read_csv('data.csv')
@@ -10,15 +12,17 @@ df = pd.read_csv('data.csv')
 df.pop('id')
 df = df.dropna()
 
-df1 = df.loc[df['class'] == 1]
-df2 = df.loc[df['class'] == 0][:int(len(df1)*1)] 
+testing = df[0:int(len(df)*0.2)]
+training = df[int(len(df)*0.2):]
 
-df = pd.concat([df1,df2])
+df1 = training.loc[training['class'] == 1]
+df2 = training.loc[training['class'] == 0][:int(len(df1)*2)] 
 
-target = df.pop('class')
-target = target.to_numpy()
+training = pd.concat([df1,df2])
 
-dftrain, dfeval,y_train ,y_eval = train_test_split(df, target, test_size = 0.2, random_state = 42)
+Testtarget = testing.pop('class')
+TrainTarget = training.pop('class')
+
 
 NUMERIC_COLUMNS = ['net profit / total assets','total liabilities / total assets',
 'working capital / total assets','current assets / short-term liabilities',
@@ -50,7 +54,7 @@ for feature_name in NUMERIC_COLUMNS:
   feature_columns.append(tf.feature_column.numeric_column(feature_name,
                                            dtype=tf.float32))
 
-NUM_EXAMPLES = len(y_train)
+NUM_EXAMPLES = len(TrainTarget)
 
 def make_input_fn(X, y, n_epochs=None, shuffle=True):
   def input_fn():
@@ -65,8 +69,8 @@ def make_input_fn(X, y, n_epochs=None, shuffle=True):
   return input_fn
 
 # Training and evaluation input functions.
-train_input_fn = make_input_fn(dftrain, y_train)
-eval_input_fn = make_input_fn(dfeval, y_eval, shuffle=False, n_epochs=1)
+train_input_fn = make_input_fn(training, TrainTarget)
+eval_input_fn = make_input_fn(testing, Testtarget, shuffle=False, n_epochs=1)
 
 linear_est = tf.estimator.LinearClassifier(feature_columns)
 
@@ -82,7 +86,7 @@ probs = pd.Series([pred['probabilities'][1] for pred in pred_dicts])
 print(pd.Series(result))
 
 a = pd.Series([pred['class_ids'][0] for pred in pred_dicts])
-con_mat = tf.math.confusion_matrix(labels=y_eval, predictions=a).numpy()
+con_mat = tf.math.confusion_matrix(labels=Testtarget, predictions=a).numpy()
 print('Confusion matrix of Linear Clasification')
 print(con_mat)
 ################################ BOOSTED TREES ######################################
@@ -103,18 +107,24 @@ probs = pd.Series([pred['probabilities'][1] for pred in pred_dicts])
 #tf.keras.experimental.export_saved_model(est, 'ModelisTree')
 #est.export_saved_model('ModelisTree')
 
+#a = pd.Series([pred['class_ids'][0] for pred in pred_dicts])
+a = pd.Series([pred['logistic'] for pred in pred_dicts])
+
+fpr_keras, tpr_keras, thresholds_keras = roc_curve(Testtarget, a)
+auc_keras = auc(fpr_keras, tpr_keras)
+plt.figure(1)
+plt.plot([0, 1], [0, 1], 'k--')
+plt.plot(fpr_keras, tpr_keras, label='Keras (area = {:.3f})'.format(auc_keras))
+plt.xlabel('False positive rate')
+plt.ylabel('True positive rate')
+plt.title('ROC curve')
+plt.legend(loc='best')
+plt.show()
 
 a = pd.Series([pred['class_ids'][0] for pred in pred_dicts])
-cnt = 0
-for i in range(len(a)):
-    if a[i] == y_eval[i]:
-        cnt+=1
-    print(a[i], ' = ', y_eval[i])
 
-con_mat = tf.math.confusion_matrix(labels=y_eval, predictions=a).numpy()
+con_mat = tf.math.confusion_matrix(labels=Testtarget, predictions=a).numpy()
 
 print('Confusion matrix of Boosted Trees')
 print(con_mat)
-
-print('Accuracy: ', cnt/len(a))
 
