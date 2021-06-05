@@ -5,23 +5,11 @@ from sklearn.model_selection import train_test_split
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_curve
 from sklearn.metrics import auc
+from ReadnFormat import ReadnFormat
 
 MaxSteps = 100
-df = pd.read_csv('data.csv')
 
-df.pop('id')
-df = df.dropna()
-
-testing = df[0:int(len(df)*0.2)]
-training = df[int(len(df)*0.2):]
-
-df1 = training.loc[training['class'] == 1]
-df2 = training.loc[training['class'] == 0][:int(len(df1)*2)] 
-
-training = pd.concat([df1,df2])
-
-Testtarget = testing.pop('class')
-TrainTarget = training.pop('class')
+training, testing, TrainTarget, Testtarget = ReadnFormat(TestingDataPercent = 0.2, SamplingPercentageOfBancrupt = 2)
 
 
 NUMERIC_COLUMNS = ['net profit / total assets','total liabilities / total assets',
@@ -108,22 +96,13 @@ probs = pd.Series([pred['probabilities'][1] for pred in pred_dicts])
 #est.export_saved_model('ModelisTree')
 
 #a = pd.Series([pred['class_ids'][0] for pred in pred_dicts])
-a = pd.Series([pred['logistic'] for pred in pred_dicts])
+Predicted = pd.Series([pred['logistic'] for pred in pred_dicts])
 
-fpr_keras, tpr_keras, thresholds_keras = roc_curve(Testtarget, a)
-auc_keras = auc(fpr_keras, tpr_keras)
-plt.figure(1)
-plt.plot([0, 1], [0, 1], 'k--')
-plt.plot(fpr_keras, tpr_keras, label='Keras (area = {:.3f})'.format(auc_keras))
-plt.xlabel('False positive rate')
-plt.ylabel('True positive rate')
-plt.title('ROC curve')
-plt.legend(loc='best')
-plt.show()
+PrintRoc(Predicted=Predicted, Testtarget = Testtarget)
 
-a = pd.Series([pred['class_ids'][0] for pred in pred_dicts])
+Predicted = pd.Series([pred['class_ids'][0] for pred in pred_dicts])
 
-con_mat = tf.math.confusion_matrix(labels=Testtarget, predictions=a).numpy()
+con_mat = tf.math.confusion_matrix(labels=Testtarget, predictions=Predicted).numpy()
 
 print('Confusion matrix of Boosted Trees')
 print(con_mat)
